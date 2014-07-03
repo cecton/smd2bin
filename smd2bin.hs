@@ -11,7 +11,10 @@ main = do
     cmd  <- getProgName
     args <- getArgs
     case args of
-        [] -> putStrLn $ "usage: " ++ cmd ++ " <file.smd>"
+        [] -> putStrLn $ "usage: " ++ cmd ++ " <infile.smd> [<outfile.bin>]"
+        [smd]  -> do
+            content <- BS.readFile smd
+            L.putStr (convert_smd_bin content)
         [smd, bin]  -> do
             content <- BS.readFile smd
             L.writeFile bin (convert_smd_bin content)
