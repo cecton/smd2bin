@@ -21,8 +21,9 @@ main = do
 
 interleaveBlocks :: [(BS.ByteString, BS.ByteString)] -> [BS.ByteString]
 interleaveBlocks []          =  []
-interleaveBlocks ((x, y):xs) =  BS.transpose [y, x]
-                             ++ interleaveBlocks xs
+interleaveBlocks ((x, y):xs) =
+    BS.concat (BS.zipWith (\ a b -> BS.pack [b, a]) x y)
+    : interleaveBlocks xs
 
 toBlocks :: BS.ByteString -> [(BS.ByteString, BS.ByteString)]
 toBlocks buf
