@@ -3,6 +3,7 @@
 import System.IO
 import System.Environment
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as L
 
 -- | main function
 main :: IO ()
@@ -13,17 +14,20 @@ main = do
         [] -> putStrLn $ "usage: " ++ cmd ++ " <file.smd>"
         [smd, bin]  -> do
             content <- BS.readFile smd
-            BS.writeFile bin (convert_smd_bin content 512 16384)
+            L.writeFile bin (convert_smd_bin content)
 
-smd_bin :: BS.ByteString -> Int -> Int -> BS.ByteString
-smd_bin buf block_size block_split
-    | BS.null buf = BS.empty
-    | otherwise   = BS.pack
-        (concat [ [j, i]
-                | (i, j) <- (\(x, y) -> BS.zip x y)
-                            (BS.splitAt block_split buf)])
-        `BS.append` (smd_bin (BS.drop block_size buf) block_size block_split)
+interleaveBlocks :: [(BS.ByteString, BS.ByteString)] -> [BS.ByteString]
+interleaveBlocks []          =  []
+interleaveBlocks ((x, y):xs) =  BS.transpose [y, x]
+                             ++ interleaveBlocks xs
 
-convert_smd_bin :: BS.ByteString -> Int -> Int -> BS.ByteString
-convert_smd_bin buf header_size block_size
-    = smd_bin (BS.drop header_size buf) block_size (div block_size 2)
+toBlocks :: BS.ByteString -> [(BS.ByteString, BS.ByteString)]
+toBlocks buf
+    | BS.null buf =  []
+    | otherwise   = let (before, after) = BS.splitAt 16384 buf
+                    in  BS.splitAt 8192 before : toBlocks after
+
+smd_bin = L.fromChunks . interleaveBlocks . toBlocks
+
+convert_smd_bin :: BS.ByteString -> L.ByteString
+convert_smd_bin = smd_bin . BS.drop 512
